@@ -1,0 +1,13 @@
+package com.tk.integration;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class TkIntegrationApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(TkIntegrationApplication.class, args);
+	}
+
+}
