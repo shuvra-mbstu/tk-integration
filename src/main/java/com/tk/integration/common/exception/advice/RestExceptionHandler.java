@@ -34,83 +34,9 @@ public class RestExceptionHandler extends ResponseEntityExceptionHandler {
 
         return new ResponseEntity<>(tkIntegrationError, HttpStatus.INTERNAL_SERVER_ERROR);
     }
-//
-//    @ExceptionHandler(ConstraintViolationException.class)
-//    public final ResponseEntity<Object>
-//    handleConstraintViolationExceptionAllException(ConstraintViolationException ex, WebRequest request) {
-//        ApiError apiError = new ApiError();
-//        Set<ConstraintViolation<?>> violations = ex.getConstraintViolations();
-//        violations.forEach(violation -> {
-//            TkIntegrationError tkIntegrationError = getTkIntegrationError(violation.getMessageTemplate());
-//            apiError.addError(tkIntegrationError);
-//        });
-//        return new ResponseEntity<>(apiError, HttpStatus.BAD_REQUEST);
-//    }
-//
-//    @ExceptionHandler(TkIntegrationServerException.class)
-//    public final ResponseEntity<Object> handleIntegrationServerException(TkIntegrationServerException ex, WebRequest request) {
-//        ApiError apiError = new ApiError();
-//        TkIntegrationError tkIntegrationError = getTkIntegrationError(ex.getErrorId());
-//        apiError.addError(tkIntegrationError);
-//        return new ResponseEntity<>(apiError, ex.getStatus());
-//    }
-//
-//    @Override
-//    protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex,
-//                                                                  HttpHeaders headers, HttpStatusCode status,
-//                                                                  WebRequest request) {
-//
-//        ApiError apiError = new ApiError();
-//        for (FieldError error : ex.getBindingResult().getFieldErrors()) {
-//            TkIntegrationError tkIntegrationError = getTkIntegrationError(error.getDefaultMessage(),
-//                    buildErrorMessage(error));
-//            apiError.addError(tkIntegrationError);
-//        }
-//        return new ResponseEntity<>(apiError, HttpStatus.BAD_REQUEST);
-//    }
-//
-//    @Override
-//    protected ResponseEntity<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException e,
-//                                                                  HttpHeaders headers, HttpStatusCode status,
-//                                                                  WebRequest request) {
-//        ApiError apiError = new ApiError();
-//        if (e.getMostSpecificCause() instanceof TkIntegrationServerException tkIntegrationServerException) {
-//            TkIntegrationError error = getTkIntegrationError(tkIntegrationServerException.getErrorId());
-//            apiError.addError(error);
-//            return new ResponseEntity<>(apiError, HttpStatus.BAD_REQUEST);
-//        } else if (e.getMostSpecificCause() instanceof InvalidFormatException) {
-//            InvalidFormatException iex = (InvalidFormatException) e.getMostSpecificCause();
-//            iex.getPath().forEach(reference -> {
-//                TkIntegrationError tkIntegrationError = new TkIntegrationError(ErrorId.INVALID_DATA_FORMAT_EXCEPTION, iex.getOriginalMessage());
-//                apiError.addError(tkIntegrationError);
-//            });
-//            return new ResponseEntity<>(apiError, HttpStatus.BAD_REQUEST);
-//        }
-//        return handleAllExceptions(e, request);
-//    }
-//
-//    private TkIntegrationError getTkIntegrationError(String code) {
-//        TkIntegrationError tkIntegrationError = ErrorCodeReader.getTkIntegrationError(code);
-//        if (Objects.isNull(tkIntegrationError)) {
-//            return ErrorCodeReader.getErrorByMessage(code);
-//        }
-//        return tkIntegrationError;
-//    }
-//
-//    private TkIntegrationError getTkIntegrationError(String code, String message) {
-//        TkIntegrationError tkIntegrationError = ErrorCodeReader.getTkIntegrationError(code);
-//        if (Objects.isNull(tkIntegrationError)) {
-//            return ErrorCodeReader.getErrorByMessage(message);
-//        }
-//        return tkIntegrationError;
-//    }
-//
-//    private String buildErrorMessage(FieldError error) {
-//        return capitalize(StringUtils.join(splitByCharacterTypeCamelCase(emptyFieldErrorIfNull(error))
-//        ), SPACE)) + SPACE + error.getDefaultMessage();
-//    }
 
-    private String emptyFieldErrorIfNull(FieldError fieldError) {
-        return Objects.isNull(fieldError) ? ApplicationConstant.EMPTY_STRING : fieldError.getField();
+    @ExceptionHandler(TkIntegrationServerException.class)
+    public final ResponseEntity<Object> handleIntegrationServerException(TkIntegrationServerException ex) {
+        return new ResponseEntity<>(ex.getLocalizedMessage(), ex.getStatus());
     }
 }
