@@ -1,4 +1,4 @@
-package com.tk.integration.common.constant;
+package com.tk.integration.common.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;

@@ -1,10 +1,8 @@
 package com.tk.integration.service;
 
 import com.tk.integration.common.constant.ApplicationConstant;
+import com.tk.integration.common.service.StorageService;
 import com.tk.integration.common.exception.TkIntegrationServerException;
-import com.tk.integration.common.constant.StorageService;
-import com.tk.integration.service.ExtractionService;
-import lombok.Getter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,12 +13,8 @@ import reactor.core.publisher.Mono;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.BitSet;
-import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class SubmissionAndRetrievalService {
@@ -40,40 +34,40 @@ public class SubmissionAndRetrievalService {
     public Mono<ResponseEntity<String>> submitFile(MultipartFile file, String account, String username, String password) {
         String processId = UUID.randomUUID().toString();  // Generate a random UUID for the process ID
         storageService.storeResult(processId, ApplicationConstant.STATUS);
-//        try {
-//            // Specify a custom directory
-//            File directory = new File("/path/to/custom/directory");
-//
-//            // Create the directory if it doesn't exist
-//            if (!directory.exists()) {
-//                directory.mkdirs();
-//            }
-//
-//            // Create a temporary file in the specified directory
-//            File tempFile = File.createTempFile("uploadedFile", ".tmp", directory);
-//
-//            // Print the path of the temporary file
-//            System.out.println("Temporary file created at: " + tempFile.getAbsolutePath());
-//
-//            // Optionally, delete the file when the JVM exits
-//            tempFile.deleteOnExit();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
+        try {
+            // Specify a custom directory
+            File directory = new File("../tk-integration/tmp");
 
-        processJobAsync(processId, file, account, username, password);
+            // Create the directory if it doesn't exist
+            if (!directory.exists()) {
+                directory.mkdirs();
+            }
+
+            // Create a temporary file in the specified directory
+            File tempFile = File.createTempFile(Objects.requireNonNull(file.getOriginalFilename()), ".tmp", directory);
+//            file.transferTo(tempFile);
+
+            // Print the path of the temporary file
+            System.out.println("Temporary file created at: " + tempFile.getAbsolutePath());
+
+            // Optionally, delete the file when the JVM exits
+            processJobAsync(processId, tempFile, account, username, password);
 //        return extractionService.processCV(file, account, username, password)
 //                .map(result -> {
 //                    resultStore.put(processId, result);  // Store the result once ready
 //                    return ResponseEntity.ok(processId);
 //                });
-        System.out.println("processId: " + processId);
 
+//            tempFile.deleteOnExit();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        System.out.println("processId: " + processId);
         return Mono.just(ResponseEntity.ok(processId));
     }
 
-    @Async("processExecutor")
-    public void processJobAsync(String processId, MultipartFile file, String account, String username, String password) {
+    @Async
+    public void processJobAsync(String processId, File file, String account, String username, String password) {
         try {
 //            UUID fileId = storageService.storeFile(file);
 

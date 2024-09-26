@@ -1,24 +1,17 @@
 package com.tk.integration.service;
 
-import com.tk.integration.common.constant.StorageService;
+import com.tk.integration.common.service.StorageService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Mono;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.BitSet;
-import java.util.UUID;
 
 @Service
 public class ExtractionService {
@@ -32,8 +25,10 @@ public class ExtractionService {
         this.storageService = storageService;
     }
 
-    public Mono<String> processCV(MultipartFile file, String account, String username, String password) {
+    public Mono<String> processCV(File file, String account, String username, String password) {
         try {
+//            File tempFile = filepath.
+//            UUID fileId = storageService.storeFile(new MultipartFile(tempFile));
 //            MultipartFile file = storageService.retrieveFile(fileId);
 //            System.out.println("file: " + file.getResource().getInputStream());
 //            Resource resource = new ClassPathResource(Objects.requireNonNull(file.getOriginalFilename()), file.getInputStream().getClass());
@@ -43,7 +38,7 @@ public class ExtractionService {
             formData.add("account", account);
             formData.add("username", username);
             formData.add("password", password);
-            formData.add("uploaded_file", file.getResource());
+            formData.add("uploaded_file", new FileSystemResource(file));
 
             System.out.println("formData: " + formData);
             return webClient.post()
@@ -53,7 +48,7 @@ public class ExtractionService {
                     .retrieve()
                     .bodyToMono(String.class); // Return the result as Mono<String>
         } catch (Exception e) {
-            return Mono.error(new RuntimeException("Failed to process CV", e));
+            return Mono.error(new RuntimeException("Failed to process CV", e.getCause()));
         }
     }
 
