@@ -37,7 +37,7 @@ public class ResultProcessor {
      */
     public String retrieveResult(String processId) {
         if (processId == null || processId.isEmpty()) {
-            throw new IllegalArgumentException("Process ID cannot be null or empty");
+            throw TkIntegrationServerException.dataSaveException(ApplicationConstant.PROCESS_ID_NOT_NULL);
         }
         return resultStore.get(processId); // Safely retrieve the result
     }

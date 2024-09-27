@@ -1,5 +1,7 @@
 package com.tk.integration.common.processor;
 
+import com.tk.integration.common.constant.ApplicationConstant;
+import com.tk.integration.common.exception.TkIntegrationServerException;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -17,6 +19,9 @@ public class BinaryToMultipartFileProcessor {
      * @return MultipartFile representing the binary data, which can be used in file upload scenarios.
      */
     public MultipartFile convertBytesToMultipartFile(byte[] binaryData, String fileName) {
+        if (binaryData == null) {
+            throw TkIntegrationServerException.internalServerException(ApplicationConstant.BINARY_DATA_NOT_NULL);
+        }
         // Use a content type based on the file extension if needed, but default to "application/octet-stream"
         String contentType = determineContentType(fileName);
 
