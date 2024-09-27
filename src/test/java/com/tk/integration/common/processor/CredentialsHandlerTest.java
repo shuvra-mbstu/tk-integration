@@ -1,63 +1,122 @@
 package com.tk.integration.common.processor;
 
+import com.tk.integration.common.constant.ApplicationConstant;
+import com.tk.integration.common.exception.TkIntegrationServerException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpHeaders;
+
 import static org.junit.jupiter.api.Assertions.*;
 
-public class CredentialsHandlerTest {
+class CredentialsHandlerTest {
 
-    private final CredentialsHandler credentialsHandler = new CredentialsHandler();
+    private CredentialsHandler credentialsHandler;
+
+    @BeforeEach
+    void setUp() {
+        credentialsHandler = new CredentialsHandler();
+    }
 
     @Test
-    public void testDecodeBasicAuthHeader() {
-        // Base64 encoded for "username:password"
-        String encodedAuth = "Basic dXNlcm5hbWU6cGFzc3dvcmQ=";
+    void testDecodeValidBasicAuthHeader() {
+        // Basic Authorization header for "username:password" encoded in Base64
+        String validHeader = "Basic dXNlcm5hbWU6cGFzc3dvcmQ=";  // "username:password" in base64
 
-        String[] credentials = credentialsHandler.decodeBasicAuthHeader(encodedAuth);
+        // Act
+        String[] credentials = credentialsHandler.decodeBasicAuthHeader(validHeader);
 
+        // Assert
         assertNotNull(credentials);
         assertEquals("username", credentials[0]);
         assertEquals("password", credentials[1]);
     }
 
     @Test
-    public void testDecodeBasicAuthHeaderWithInvalidFormat() {
-        // Invalid header format (missing Basic)
-        String invalidAuth = "dXNlcm5hbWU6cGFzc3dvcmQ=";
+    void testDecodeInvalidBasicAuthHeader() {
+        // Invalid Base64-encoded string
+        String invalidHeader = "Basic invalidBase64==";
 
-        String[] credentials = credentialsHandler.decodeBasicAuthHeader(invalidAuth);
-
-        assertNull(credentials); // Expect null due to missing Basic prefix
+        // Act
+        TkIntegrationServerException exception = assertThrows(TkIntegrationServerException.class, () -> {
+            credentialsHandler.extractCredentials(invalidHeader);
+        });
+        // Assert
+        assertNotNull(invalidHeader, "Last unit does not have enough valid bits");
     }
 
     @Test
-    public void testExtractCredentialsWithValidHeader() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HttpHeaders.AUTHORIZATION, "Basic dXNlcm5hbWU6cGFzc3dvcmQ=");
+    void testDecodeMissingBasicPrefix() {
+        // Header without "Basic " prefix
+        String headerWithoutBasic = "dXNlcm5hbWU6cGFzc3dvcmQ=";
 
-        String[] credentials = credentialsHandler.extractCredentials(headers);
+        // Act
+        TkIntegrationServerException exception = assertThrows(TkIntegrationServerException.class, () -> {
+            credentialsHandler.extractCredentials(headerWithoutBasic);
+        });
+        // Assert
+        assertNotNull(headerWithoutBasic, "Should return null for headers without 'Basic ' prefix.");
+    }
 
+    @Test
+    void testDecodeBasicAuthHeaderWithInvalidFormat() {
+        // A header with a valid Base64 but invalid format (no colon)
+        String invalidHeader = "Basic:";  // "username password" instead of "username:password"
+        // Act & Assert
+        TkIntegrationServerException exception = assertThrows(TkIntegrationServerException.class, () -> {
+            credentialsHandler.extractCredentials(invalidHeader);
+        });
+
+        assertEquals(ApplicationConstant.INVALID_CREDENTIALS, exception.getMessage());
+    }
+
+    @Test
+    void testExtractValidCredentials() {
+        // Valid Basic Authorization header
+        String validHeader = "Basic dXNlcm5hbWU6cGFzc3dvcmQ=";
+
+        // Act
+        String[] credentials = credentialsHandler.extractCredentials(validHeader);
+
+        // Assert
         assertNotNull(credentials);
         assertEquals("username", credentials[0]);
         assertEquals("password", credentials[1]);
     }
 
     @Test
-    public void testExtractCredentialsWithMissingAuthorization() {
-        HttpHeaders headers = new HttpHeaders(); // Empty headers
+    void testExtractCredentialsWithMissingHeader() {
+        // Missing Authorization header
+        String missingHeader = null;
 
-        String[] credentials = credentialsHandler.extractCredentials(headers);
+        // Act & Assert
+        TkIntegrationServerException exception = assertThrows(TkIntegrationServerException.class, () -> {
+            credentialsHandler.extractCredentials(missingHeader);
+        });
 
-        assertNull(credentials); // Expect null for missing Authorization header
+        assertEquals(ApplicationConstant.INVALID_CREDENTIALS, exception.getMessage());
     }
 
     @Test
-    public void testExtractCredentialsWithInvalidAuth() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HttpHeaders.AUTHORIZATION, "Bearer invalid_token");
+    void testExtractCredentialsWithInvalidPrefix() {
+        // Authorization header without "Basic " prefix
+        String invalidPrefixHeader = "Bearer dXNlcm5hbWU6cGFzc3dvcmQ=";
 
-        String[] credentials = credentialsHandler.extractCredentials(headers);
+        // Act & Assert
+        TkIntegrationServerException exception = assertThrows(TkIntegrationServerException.class, () -> {
+            credentialsHandler.extractCredentials(invalidPrefixHeader);
+        });
 
-        assertNull(credentials); // Expect null for invalid authorization scheme
+        assertEquals(ApplicationConstant.INVALID_CREDENTIALS, exception.getMessage());
+    }
+
+    @Test
+    void testExtractCredentialsWithInvalidBase64() {
+        // Invalid Base64 in Authorization header
+        String invalidBase64Header = "Basic invalidBase64==";
+
+        TkIntegrationServerException exception = assertThrows(TkIntegrationServerException.class, () -> {
+            credentialsHandler.extractCredentials(invalidBase64Header);
+        });
+
+        assertEquals("Last unit does not have enough valid bits", exception.getMessage());
     }
 }

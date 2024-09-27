@@ -1,7 +1,9 @@
 package com.tk.integration.common.processor;
 
-import org.springframework.http.HttpHeaders;
+import com.tk.integration.common.constant.ApplicationConstant;
+import com.tk.integration.common.exception.TkIntegrationServerException;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -21,12 +23,6 @@ public class CredentialsHandler {
      */
     public String[] decodeBasicAuthHeader(String header) {
         try {
-            // Ensure the header contains the expected prefix
-            if (header == null || !header.startsWith("Basic ")) {
-                logger.warning("Invalid Basic Authorization header format.");
-                return null;
-            }
-
             // Extract the Base64-encoded credentials by removing the "Basic " prefix
             String base64Credentials = header.substring("Basic ".length()).trim();
 
@@ -37,31 +33,35 @@ public class CredentialsHandler {
             String decodedString = new String(decodedBytes, StandardCharsets.UTF_8);
 
             // Split the decoded string into username and password
-            return decodedString.split(":", 2); // Split into exactly 2 parts (username and password)
+            String[] credentials = StringUtils.split(decodedString, ":");
+
+            // Validate the extracted credentials
+            if (credentials == null || credentials.length != 2 || StringUtils.isEmpty(credentials[0]) || StringUtils.isEmpty(credentials[1])) {
+                logger.warning("Invalid credentials in Basic Authorization header: " + decodedString);
+                throw TkIntegrationServerException.notAuthorized(ApplicationConstant.INVALID_CREDENTIALS);
+            }
+
+            return credentials;
         } catch (IllegalArgumentException | ArrayIndexOutOfBoundsException e) {
             // Log a warning if the decoding fails for any reason
             logger.warning("Error decoding Basic Authorization header: " + e.getMessage());
-            return null;
+            throw TkIntegrationServerException.internalServerException(e.getMessage());
         }
     }
 
     /**
      * Extracts and decodes the Basic Authorization credentials from the HTTP headers.
      *
-     * @param headers HTTP headers containing the Authorization information
+     * @param authorizationString HTTP headers containing the Authorization information
      * @return String[] A decoded array containing the username and password, or null if the header is invalid
      */
-    public String[] extractCredentials(HttpHeaders headers) {
-        // Get the Authorization header from the HttpHeaders
-        String authHeader = headers.getFirst(HttpHeaders.AUTHORIZATION);
-
-        // If the Authorization header is missing or doesn't start with "Basic ", return null
-        if (authHeader == null || !authHeader.startsWith("Basic ")) {
-            logger.warning("Authorization header is missing or does not contain Basic authentication.");
-            return null;
+    public String[] extractCredentials(String authorizationString) {
+        if (authorizationString == null || !authorizationString.startsWith("Basic ")) {
+            logger.warning("Authorization header is missing or does not contain Basic authentication." + authorizationString);
+            throw TkIntegrationServerException.notAuthorized(ApplicationConstant.INVALID_CREDENTIALS);
         }
 
         // Delegate the actual decoding of the header to the decodeBasicAuthHeader method
-        return decodeBasicAuthHeader(authHeader);
+        return decodeBasicAuthHeader(authorizationString);
     }
 }

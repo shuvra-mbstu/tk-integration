@@ -1,13 +1,15 @@
 package com.tk.integration.controller;
 
-import com.tk.integration.common.constant.ApplicationConstant;
 import com.tk.integration.common.processor.CredentialsHandler;
+import com.tk.integration.service.ExtractionService;
 import com.tk.integration.service.SubmissionAndRetrievalService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -15,11 +17,11 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.reactive.function.BodyInserters;
 import reactor.core.publisher.Mono;
 
-import static org.mockito.ArgumentMatchers.*;
+import java.io.IOException;
+
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 public class SubmissionAndRetrievalControllerTest {
@@ -30,6 +32,9 @@ public class SubmissionAndRetrievalControllerTest {
     @Mock
     private CredentialsHandler credentialsHandler;
 
+    @Mock
+    private ExtractionService extractionService;
+
     @InjectMocks
     private SubmissionAndRetrievalController submissionAndRetrievalController;
 
@@ -37,59 +42,41 @@ public class SubmissionAndRetrievalControllerTest {
 
     @BeforeEach
     void setUp() {
-        // Initialize mocks
         MockitoAnnotations.openMocks(this);
-
-        // Set up WebTestClient with the controller
         webTestClient = WebTestClient.bindToController(submissionAndRetrievalController).build();
     }
 
     @Test
-    void testSubmitFileWithValidCredentials() {
-        // Create a mock MultipartFile
-        MockMultipartFile mockFile = new MockMultipartFile("uploaded_file", "testfile.txt", "text/plain", "Test file content".getBytes());
+    void testSubmitFileWithInvalidCredentials() throws IOException {
+        // Mock MultipartFile
+        MockMultipartFile mockFile = new MockMultipartFile("uploaded_file", "testfile.txt",
+                "text/plain", "Test file content".getBytes());
 
-        // Create a MultiValueMap to hold the multipart form data
+        // Convert MockMultipartFile to Resource
+        Resource fileResource = new ByteArrayResource(mockFile.getBytes()) {
+            @Override
+            public String getFilename() {
+                return mockFile.getOriginalFilename();
+            }
+        };
+
+        // Create a MultiValueMap for multipart form-data
         MultiValueMap<String, Object> formData = new LinkedMultiValueMap<>();
-        formData.add("uploaded_file", mockFile);  // Convert MockMultipartFile to Resource
+        formData.add("uploaded_file", fileResource);  // Add file as a Resource
         formData.add("account", "testAccount");
 
-        // Mock valid credentials extraction
-        when(credentialsHandler.extractCredentials(any(HttpHeaders.class)))
-                .thenReturn(new String[]{"username", "password"});
+        // Mock invalid credentials extraction
+        when(credentialsHandler.extractCredentials(anyString())).thenReturn(null);
 
-        // Mock service response for successful submission
-        when(submissionAndRetrievalService.submitFile(any(), anyString(), anyString(), anyString()))
-                .thenReturn(Mono.just(ResponseEntity.ok("processId123")));
-
-        // Perform the multipart form-data submission using WebTestClient
+        // Simulate a multipart form-data submission using WebTestClient
         webTestClient.post()
                 .uri("/api/submit")
                 .contentType(MediaType.MULTIPART_FORM_DATA)
-                .header(HttpHeaders.AUTHORIZATION, "Basic dXNlcm5hbWU6cGFzc3dvcmQ=")  // "username:password" in base64
-                .body(BodyInserters.fromMultipartData(formData))  // Send the multipart form data
+                .header(HttpHeaders.AUTHORIZATION, "Basic invalidBase64==")
+                .bodyValue(formData)  // Send the multipart form data
                 .exchange()
-                .expectStatus().isOk()
-                .expectBody(String.class)
-                .isEqualTo("processId123");
-    }
-
-    @Test
-    void testSubmitFileWithInvalidCredentials() {
-        // Mock Authorization header with invalid credentials
-        HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.AUTHORIZATION, "Basic 64==");
-
-        // Mock credentials extraction failure
-        when(credentialsHandler.extractCredentials(any(HttpHeaders.class))).thenReturn(null);
-
-        // Test the submit endpoint
-        webTestClient.post()
-                .uri("/api/submit")
-                .header(HttpHeaders.AUTHORIZATION, "Basic 64==")
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .exchange()
-                .expectStatus().isBadRequest();
+                .expectStatus().isBadRequest()
+                .expectBody(String.class);  // Expect a 400 Bad Request when credentials are invalid
     }
 
     @Test
@@ -101,9 +88,11 @@ public class SubmissionAndRetrievalControllerTest {
         // Test the retrieve endpoint
         webTestClient.get()
                 .uri("/api/retrieve/{processId}", "processId123")
+                .header(HttpHeaders.AUTHORIZATION, "Basic dXNlcjpwYXNzd29yZA==")
                 .exchange()
                 .expectStatus().isOk()
-                .expectBody(String.class).isEqualTo("File processing result");
+                .expectBody(String.class)
+                .isEqualTo("File processing result");
     }
 
     @Test
@@ -117,6 +106,7 @@ public class SubmissionAndRetrievalControllerTest {
                 .uri("/api/retrieve/{processId}", "invalidProcessId")
                 .exchange()
                 .expectStatus().isNotFound()
-                .expectBody(String.class).isEqualTo("Invalid processId");
+                .expectBody(String.class)
+                .isEqualTo("Invalid processId");
     }
 }

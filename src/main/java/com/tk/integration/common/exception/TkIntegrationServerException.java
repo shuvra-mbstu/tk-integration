@@ -32,10 +32,6 @@ public class TkIntegrationServerException extends RuntimeException {
         return new TkIntegrationServerException(HttpStatus.INTERNAL_SERVER_ERROR, message);
     }
 
-    public static TkIntegrationServerException methodNotAllowed(String message) {
-        return new TkIntegrationServerException(HttpStatus.METHOD_NOT_ALLOWED, message);
-    }
-
     public static TkIntegrationServerException notAuthorized(String message) {
         return new TkIntegrationServerException(HttpStatus.UNAUTHORIZED, message);
     }

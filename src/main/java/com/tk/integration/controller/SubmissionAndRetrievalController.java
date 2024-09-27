@@ -1,6 +1,5 @@
 package com.tk.integration.controller;
 
-import com.tk.integration.common.constant.ApplicationConstant;
 import com.tk.integration.common.processor.CredentialsHandler;
 import com.tk.integration.service.SubmissionAndRetrievalService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,7 +10,6 @@ import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Mono;
 import reactor.util.annotation.NonNull;
 
-import java.util.function.Supplier;
 import java.util.logging.Logger;
 
 @RestController
@@ -38,16 +36,12 @@ public class SubmissionAndRetrievalController {
      * @return Mono<ResponseEntity<String>> A Mono containing the process ID or an error response
      */
     @PostMapping("/submit")
-    public Mono<ResponseEntity<String>> submit(@RequestParam("uploaded_file") @NonNull MultipartFile file,
-                                               @RequestParam("account") @NonNull String account,
+    public Mono<ResponseEntity<String>> submit(@RequestParam("uploaded_file") MultipartFile file,
+                                               @RequestParam("account") String account,
                                                @RequestHeader HttpHeaders headers) {
 
         // Extract and validate credentials from the Authorization header
-        String[] credentials = credentialsHandler.extractCredentials(headers);
-        if (credentials == null || credentials.length < 2) {
-            logger.warning("Invalid or missing credentials");
-            return Mono.just(ResponseEntity.badRequest().body(ApplicationConstant.INVALID_CREDENTIALS));
-        }
+        String[] credentials = credentialsHandler.extractCredentials(headers.getFirst(HttpHeaders.AUTHORIZATION));
 
         // Delegate the file submission to the service layer
         return submissionAndRetrievalService.submitFile(file, account, credentials[0], credentials[1]);
